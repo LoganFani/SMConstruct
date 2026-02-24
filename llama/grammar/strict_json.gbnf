@@ -1,0 +1,12 @@
+root ::= "{" ws
+          "\"original_content\"" ws ":" ws string ws "," ws
+          "\"translation\"" ws ":" ws string ws "," ws
+          "\"example_sentence\"" ws ":" ws string ws
+         "}"
+
+string ::= "\"" chars "\""
+chars ::= char*
+char ::= [^"\\] | "\\" ["\\/bfnrt] | "\\u" hex hex hex hex
+
+hex ::= [0-9a-fA-F]
+ws ::= [ \t\n\r]*
