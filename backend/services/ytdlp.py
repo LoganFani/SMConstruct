@@ -29,8 +29,6 @@ def download_video(url: str) -> str:
     
     video_id = get_video_id(url=url)
 
-    output_template = str(VIDEO_DIR / f"{video_id}.%(ext)s")
-
     for ext in ("mp4", "webm", "mkv"):
         if (VIDEO_DIR / f"{video_id}.{ext}").exists():
             print("Video already cached")
