@@ -1,15 +1,13 @@
 import os
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from services import llama
+from backend.services import llama
 from pydantic import BaseModel
-from dotenv import load_dotenv
-
-load_dotenv()
+from utils import paths
 
 router = APIRouter()
 
-MODEL_PATH = os.getenv("MISTRALQ4_PATH")
-GRAMMAR_PATH = os.getenv("LLAMA_GRAMMAR_JSON_PATH")
+MODEL_PATH = str(paths.MISTRALQ4_PATH)
+GRAMMAR_PATH = str(paths.LLAMA_GRAMMAR_JSON_PATH)
 
 
 class TranslateRequest(BaseModel):

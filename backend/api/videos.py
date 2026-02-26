@@ -1,9 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from dotenv import load_dotenv
-from services.ytdlp import download_video
-
-load_dotenv()
+from backend.services.ytdlp import download_video
 
 router = APIRouter()
 

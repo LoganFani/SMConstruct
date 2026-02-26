@@ -4,14 +4,12 @@ import subprocess
 import hashlib
 from pathlib import Path
 from dotenv import load_dotenv
+from utils import paths
 
 load_dotenv()
 
-VIDEO_DIR = Path(os.getenv("VIDEO_STORAGE", "backend/storage/videos"))
-SUBS_DIR = Path(os.getenv("SUBS_STORAGE", "backend/storage/subs"))
-
-VIDEO_DIR.mkdir(parents=True, exist_ok=True)
-SUBS_DIR.mkdir(parents=True, exist_ok=True)
+VIDEO_DIR = paths.VIDEO_STORAGE
+SUBS_DIR = paths.SUBS_STORAGE
 
 def has_ytdlp() -> bool:
     try:

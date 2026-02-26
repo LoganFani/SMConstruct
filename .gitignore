@@ -3,3 +3,5 @@ llama/models/
 env/
 
 *__pycache__/
+
+*bin/
