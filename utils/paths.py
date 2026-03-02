@@ -11,6 +11,8 @@ SUBS_STORAGE = ROOT / "backend" / "storage" / "subs"
 FRAMES_STORAGE = ROOT / "backend" / "storage" / "frames"
 BIN_DIR = ROOT / "backend" / "bin"
 
+DATA_BASE_PATH = ROOT / "backend" / "db" / "data.db"
+
 MODELS_DIR = ROOT / "llama" / "models"
 MISTRALQ4_PATH = MODELS_DIR / "mistral-7b-instruct-v0.2.Q4_0.gguf"
 
@@ -23,3 +25,4 @@ SUBS_STORAGE.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 BIN_DIR.mkdir(parents=True, exist_ok=True)
 FRAMES_STORAGE.mkdir(parents=True, exist_ok=True)
+DATA_BASE_PATH.mkdir(parents=True, exist_ok=True)
