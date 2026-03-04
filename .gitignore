@@ -10,5 +10,6 @@ backend/bin/**
 backend/storage/frames/**
 backend/storage/subs/**
 backend/storage/videos/**
+backend/storage/audio/**
 #db
 backend/db/**
