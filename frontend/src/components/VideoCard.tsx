@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import styles from "./VideoCard.module.css"
 
 interface VideoCardProps {
   id: string
@@ -9,16 +10,8 @@ interface VideoCardProps {
 
 export default function VideoCard({ id, title, fromLang, toLang }: VideoCardProps) {
   return (
-    <Link to={`/video/${id}`} style={{ textDecoration: "none", color: "inherit" }}>
-      <div
-        style={{
-          border: "1px solid #ddd",
-          borderRadius: 8,
-          padding: 16,
-          width: 220,
-          cursor: "pointer",
-        }}
-      >
+    <Link to={`/video/${id}`}>
+      <div className={styles.card}>
         <h3>{title}</h3>
         <p>{fromLang} → {toLang}</p>
       </div>

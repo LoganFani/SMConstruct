@@ -1,13 +1,18 @@
-import os
-from llama_cpp import Llama, LlamaGrammar
 import json
+from llama_cpp import Llama, LlamaGrammar
+
 
 class Translator:
-    def __init__(self, model_path:str, grammar_path = "") -> None:
+    def __init__(self, model_path: str, grammar_path: str = "") -> None:
         self.llm = Llama(model_path=model_path, n_gpu_layers=0)
         self.grammar_path = grammar_path
+        self._grammar: LlamaGrammar | None = self._load_grammar() if grammar_path else None
 
-    def build_promptv2(self, input_content: str, sentence_context: str,  from_lang: str, to_lang:str) -> str:
+    def _load_grammar(self) -> LlamaGrammar:
+        with open(self.grammar_path, "r") as f:
+            return LlamaGrammar.from_string(f.read())
+
+    def build_promptv2(self, input_content: str, sentence_context: str, from_lang: str, to_lang: str) -> str:
         return f"""
         You are a specialized language tutor.
 
@@ -32,28 +37,28 @@ class Translator:
         Original Content: {input_content}
         Sentence Context: {sentence_context}
         """
-    
-    def _get_grammar(self, grammar_path:str) -> LlamaGrammar:
-        with open(grammar_path, 'r') as gf:
-            content = gf.read()
 
-            return LlamaGrammar.from_string(content)
-        
-    def generate_response(self, prompt:str):
+    def generate_response(self, prompt: str) -> dict:
+        try:
+            kwargs = dict(prompt=prompt, max_tokens=200, temperature=0.05, repeat_penalty=1.15)
+            if self._grammar:
+                kwargs["grammar"] = self._grammar
+            output = self.llm(**kwargs)
+            return json.loads(output["choices"][0]["text"])
+        except Exception:
+            return {}
 
-        if not self.grammar_path == "":
 
-            try:
-                grammar = self._get_grammar(self.grammar_path)
-                model_output = self.llm(prompt=prompt, max_tokens=200, grammar=grammar, temperature=0.05, repeat_penalty=1.15)
+# Module-level singleton — populated by lifespan on startup
+translator: Translator | None = None
 
-                return json.loads(model_output["choices"][0]["text"])
-            except:
-                return {}
 
-        else:
-            model_output = self.llm(prompt=prompt, max_tokens=200, temperature=0.05, repeat_penalty=1.15)
-            try:
-                return json.loads(model_output["choices"][0]["text"])
-            except:
-                return {}
+def init_translator(model_path: str, grammar_path: str = "") -> None:
+    global translator
+    translator = Translator(model_path, grammar_path)
+
+
+def get_translator() -> Translator:
+    if translator is None:
+        raise RuntimeError("Translator has not been initialized. Call init_translator() first.")
+    return translator

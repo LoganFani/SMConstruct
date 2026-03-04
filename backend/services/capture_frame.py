@@ -17,7 +17,7 @@ def capture_frame(video_id: str, time_stamp: float):
     frame_path = paths.FRAMES_STORAGE / f"{video_id}_{convert_ts}.jpg"
 
     if frame_path.exists():
-        return frame_path
+        return str(frame_path)
     
     ffmpeg_cmd = [
         "ffmpeg",

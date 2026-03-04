@@ -1,0 +1,42 @@
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 32px;
+}
+
+.page h1 {
+  font-size: 1.8rem;
+  margin-bottom: 28px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: -6px;
+}
+
+.error {
+  color: #e05;
+  font-size: 0.85rem;
+}
+
+.emptyMsg {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.submitBtn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 0.7em;
+  font-size: 1rem;
+}
