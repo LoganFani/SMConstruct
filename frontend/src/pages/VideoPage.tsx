@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useLocation } from "react-router-dom"
 import type { TranscriptResponse, TranscriptSegment } from "../types/transcript"
+import CardItem, { type Card } from "../components/CardItem"
+import ExportAnkiModal from "../components/ExportAnkiModal"
 import styles from "./VideoPage.module.css"
 
 const API = "http://127.0.0.1:8000"
@@ -22,6 +24,17 @@ interface CaptureState {
   framePath: string | null
   audioPath: string | null
   error: string | null
+}
+
+interface TokenRange {
+  segId: number
+  fromIdx: number
+  toIdx: number
+}
+
+interface FloatPos {
+  x: number
+  y: number
 }
 
 function getActiveSegId(segments: TranscriptSegment[], currentTime: number): number | null {
@@ -48,17 +61,27 @@ export default function VideoPage() {
   const [autoPause, setAutoPause]       = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  const [activeTab, setActiveTab] = useState<"transcript" | "cards">("transcript")
+  const [cards, setCards]         = useState<Card[]>([])
+  const [cardsLoading, setCardsLoading] = useState(false)
+
   const [panelOpen, setPanelOpen]           = useState(false)
   const [selectedWord, setSelectedWord]     = useState<SelectedWord | null>(null)
   const [translation, setTranslation]       = useState<TranslateResponse | null>(null)
   const [translating, setTranslating]       = useState(false)
   const [translateError, setTranslateError] = useState<string | null>(null)
 
-  const [capture, setCapture]     = useState<CaptureState>({ framePath: null, audioPath: null, error: null })
-  const [capturing, setCapturing] = useState(false)
+  const [capture, setCapture]       = useState<CaptureState>({ framePath: null, audioPath: null, error: null })
+  const [capturing, setCapturing]   = useState(false)
   const [cardSaving, setCardSaving] = useState(false)
   const [cardSaved, setCardSaved]   = useState(false)
   const [cardError, setCardError]   = useState<string | null>(null)
+
+  const [ankiOpen, setAnkiOpen] = useState(false)
+
+  const [anchorIdx, setAnchorIdx]   = useState<{ segId: number; idx: number } | null>(null)
+  const [tokenRange, setTokenRange] = useState<TokenRange | null>(null)
+  const [floatPos, setFloatPos]     = useState<FloatPos | null>(null)
 
   useEffect(() => {
     if (!stateFromLang || !stateTolLang) {
@@ -75,6 +98,16 @@ export default function VideoPage() {
       .then(d => { setTranscript(d); setTranscriptLoading(false) })
       .catch(err => { console.error(err); setTranscriptLoading(false) })
   }, [videoId])
+
+  // Load cards when tab is switched to cards
+  useEffect(() => {
+    if (activeTab !== "cards") return
+    setCardsLoading(true)
+    fetch(`${API}/api/cards/${videoId}`)
+      .then(r => r.json())
+      .then(d => { setCards(d); setCardsLoading(false) })
+      .catch(err => { console.error(err); setCardsLoading(false) })
+  }, [activeTab, videoId])
 
   useEffect(() => {
     const video = videoRef.current
@@ -108,16 +141,20 @@ export default function VideoPage() {
     segRefs.current.get(activeSegId)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
   }, [activeSegId])
 
+  function clearSelection() {
+    setAnchorIdx(null); setTokenRange(null); setFloatPos(null)
+  }
+
   function handleClosePanel() {
     setPanelOpen(false); setSelectedWord(null); setTranslation(null)
     setTranslateError(null); setCapture({ framePath: null, audioPath: null, error: null })
-    setCardSaved(false); setCardError(null)
+    setCardSaved(false); setCardError(null); clearSelection()
   }
 
-  async function handleTokenClick(token: string, context: string, start: number, end: number) {
+  async function triggerTranslate(phrase: string, context: string, start: number, end: number) {
     if (videoRef.current) videoRef.current.currentTime = start
+    setSelectedWord({ token: phrase, context, start, end })
     setPanelOpen(true)
-    setSelectedWord({ token, context, start, end })
     setTranslation(null); setTranslateError(null); setTranslating(true)
     setCapture({ framePath: null, audioPath: null, error: null }); setCapturing(true)
     setCardSaved(false); setCardError(null)
@@ -125,7 +162,7 @@ export default function VideoPage() {
     const [translateResult, captureResult] = await Promise.allSettled([
       fetch(`${API}/api/llm/translate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ from_lang: fromLang, to_lang: toLang, user_input: token, context }),
+        body: JSON.stringify({ from_lang: fromLang, to_lang: toLang, user_input: phrase, context }),
       }).then(r => { if (!r.ok) throw new Error(`Translate failed: ${r.status}`); return r.json() }),
 
       Promise.all([
@@ -153,6 +190,38 @@ export default function VideoPage() {
     setCapturing(false)
   }
 
+  function handleTokenClick(e: React.MouseEvent, token: string, tokenIdx: number, seg: TranscriptSegment) {
+    if (e.shiftKey && anchorIdx && anchorIdx.segId === seg.id) {
+      const from = Math.min(anchorIdx.idx, tokenIdx)
+      const to   = Math.max(anchorIdx.idx, tokenIdx)
+      setTokenRange({ segId: seg.id, fromIdx: from, toIdx: to })
+    } else {
+      clearSelection(); handleClosePanel()
+      setAnchorIdx({ segId: seg.id, idx: tokenIdx })
+      setTokenRange({ segId: seg.id, fromIdx: tokenIdx, toIdx: tokenIdx })
+    }
+    setFloatPos({ x: e.clientX, y: e.clientY - 44 })
+  }
+
+  function handleFloatTranslate() {
+    if (!tokenRange || !transcript) return
+    const seg = transcript.segments.find(s => s.id === tokenRange.segId)
+    if (!seg) return
+    const phrase = seg.tokens.slice(tokenRange.fromIdx, tokenRange.toIdx + 1).join(" ")
+    clearSelection()
+    triggerTranslate(phrase, seg.text, seg.start, seg.end)
+  }
+
+  function isTokenSelected(segId: number, tokenIdx: number): boolean {
+    if (!tokenRange && anchorIdx?.segId === segId && anchorIdx?.idx === tokenIdx) return true
+    if (tokenRange?.segId === segId && tokenIdx >= tokenRange.fromIdx && tokenIdx <= tokenRange.toIdx) return true
+    if (!tokenRange && selectedWord && transcript) {
+      const seg = transcript.segments.find(s => s.id === segId)
+      if (seg) return seg.tokens[tokenIdx] === selectedWord.token && seg.text === selectedWord.context
+    }
+    return false
+  }
+
   async function handleSaveCard() {
     if (!selectedWord || !translation) return
     setCardSaving(true); setCardError(null)
@@ -166,12 +235,19 @@ export default function VideoPage() {
         }),
       })
       if (!res.ok) throw new Error("Failed to save card")
+      const newCard: Card = await res.json()
+      setCards(prev => [newCard, ...prev])
       setCardSaved(true)
     } catch (err: any) {
       setCardError(err.message || "Error saving card")
     } finally {
       setCardSaving(false)
     }
+  }
+
+  async function handleDeleteCard(cardId: number) {
+    await fetch(`${API}/api/cards/${cardId}`, { method: "DELETE" })
+    setCards(prev => prev.filter(c => c.id !== cardId))
   }
 
   const readyToSave = translation && !translating && !capturing
@@ -187,7 +263,7 @@ export default function VideoPage() {
 
       <div className={styles.toolbar}>
         <span className={styles.toolbarLang}>{fromLang} → {toLang}</span>
-        <button>Export Anki</button>
+        <button onClick={() => setAnkiOpen(true)}>Export Anki</button>
         <button onClick={() => setSettingsOpen(o => !o)}>
           {settingsOpen ? "✕ Settings" : "⚙ Settings"}
         </button>
@@ -202,96 +278,131 @@ export default function VideoPage() {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className={styles.tabs}>
+        <button
+          className={`${styles.tab} ${activeTab === "transcript" ? styles.activeTab : ""}`}
+          onClick={() => setActiveTab("transcript")}
+        >
+          Transcript
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === "cards" ? styles.activeTab : ""}`}
+          onClick={() => setActiveTab("cards")}
+        >
+          Cards {cards.length > 0 && `(${cards.length})`}
+        </button>
+      </div>
+
       <div className={styles.main}>
 
-        <div className={styles.transcript}>
-          <h3>Transcript</h3>
-          {transcriptLoading && <p className={styles.panelMuted}>Loading transcript...</p>}
-          {transcript?.segments.map(seg => (
-            <p
-              key={seg.id}
-              ref={el => { if (el) segRefs.current.set(seg.id, el) }}
-              className={`${styles.segment} ${seg.id === activeSegId ? styles.active : ""}`}
-            >
-              {seg.tokens.map((token, i) => {
-                const isSelected = selectedWord?.token === token && selectedWord?.context === seg.text
-                return (
-                  <span
-                    key={i}
-                    onClick={() => handleTokenClick(token, seg.text, seg.start, seg.end)}
-                    className={`${styles.token} ${isSelected ? styles.selected : ""}`}
-                  >
-                    {token}
-                  </span>
-                )
-              })}
-            </p>
-          ))}
-        </div>
-
-        {panelOpen && (
-          <div className={styles.panel}>
-
-            <div className={styles.panelHeader}>
-              <h3>Word Info</h3>
-              <button className={styles.closeBtn} onClick={handleClosePanel}>✕</button>
+        {activeTab === "transcript" ? (
+          <>
+            <div className={styles.transcript}>
+              {transcriptLoading && <p className={styles.panelMuted}>Loading transcript...</p>}
+              {transcript?.segments.map(seg => (
+                <p
+                  key={seg.id}
+                  ref={el => { if (el) segRefs.current.set(seg.id, el) }}
+                  className={`${styles.segment} ${seg.id === activeSegId ? styles.active : ""}`}
+                >
+                  {seg.tokens.map((token, i) => (
+                    <span
+                      key={i}
+                      onClick={e => handleTokenClick(e, token, i, seg)}
+                      className={`${styles.token} ${isTokenSelected(seg.id, i) ? styles.selected : ""}`}
+                    >
+                      {token}
+                    </span>
+                  ))}
+                </p>
+              ))}
             </div>
 
-            <div className={styles.panelSection}>
-              <span className={styles.panelLabel}>Word</span>
-              <span className={styles.panelWord}>{selectedWord?.token}</span>
-            </div>
+            {panelOpen && (
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <h3>Word Info</h3>
+                  <button className={styles.closeBtn} onClick={handleClosePanel}>✕</button>
+                </div>
 
-            <div className={styles.panelSection}>
-              <span className={styles.panelLabel}>Context</span>
-              <span className={styles.panelContext}>{selectedWord?.context}</span>
-            </div>
+                <div className={styles.panelSection}>
+                  <span className={styles.panelLabel}>Word</span>
+                  <span className={styles.panelWord}>{selectedWord?.token}</span>
+                </div>
 
-            <div className={styles.panelSection}>
-              <span className={styles.panelLabel}>Audio</span>
-              {capturing && <span className={styles.panelMuted}>Capturing...</span>}
-              {capture.error && <span className={styles.panelError}>{capture.error}</span>}
-              {capture.audioPath && !capturing && (
-                <audio
-                  className={styles.audioPlayer}
-                  controls
-                  src={`${API}/api/capture/audio-file/${encodeURIComponent(capture.audioPath)}`}
-                />
-              )}
-            </div>
+                <div className={styles.panelSection}>
+                  <span className={styles.panelLabel}>Context</span>
+                  <span className={styles.panelContext}>{selectedWord?.context}</span>
+                </div>
 
-            <div className={styles.panelSection}>
-              <span className={styles.panelLabel}>Translation</span>
-              {translating && <span className={styles.panelMuted}>Translating...</span>}
-              {translateError && <span className={styles.panelError}>{translateError}</span>}
-              {translation && !translating && <span className={styles.panelTranslation}>{translation.translation}</span>}
-            </div>
+                <div className={styles.panelSection}>
+                  <span className={styles.panelLabel}>Audio</span>
+                  {capturing && <span className={styles.panelMuted}>Capturing...</span>}
+                  {capture.error && <span className={styles.panelError}>{capture.error}</span>}
+                  {capture.audioPath && !capturing && (
+                    <audio className={styles.audioPlayer} controls
+                      src={`${API}/api/capture/audio-file/${encodeURIComponent(capture.audioPath)}`} />
+                  )}
+                </div>
 
-            <div className={styles.panelSection}>
-              <span className={styles.panelLabel}>Frame</span>
-              {capturing && <span className={styles.panelMuted}>Capturing...</span>}
-              {capture.error && <span className={styles.panelError}>{capture.error}</span>}
-              {capture.framePath && !capturing && (
-                <img
-                  className={styles.frameImg}
-                  src={`${API}/api/capture/frame-file/${encodeURIComponent(capture.framePath)}`}
-                  alt="Captured frame"
-                />
-              )}
-            </div>
+                <div className={styles.panelSection}>
+                  <span className={styles.panelLabel}>Translation</span>
+                  {translating && <span className={styles.panelMuted}>Translating...</span>}
+                  {translateError && <span className={styles.panelError}>{translateError}</span>}
+                  {translation && !translating && <span className={styles.panelTranslation}>{translation.translation}</span>}
+                </div>
 
-            {readyToSave && (
-              <div>
-                <button className={styles.saveBtn} onClick={handleSaveCard} disabled={cardSaving || cardSaved}>
-                  {cardSaving ? "Saving..." : cardSaved ? "✓ Card Saved" : "Save Card"}
-                </button>
-                {cardError && <p className={styles.saveError}>{cardError}</p>}
+                <div className={styles.panelSection}>
+                  <span className={styles.panelLabel}>Frame</span>
+                  {capturing && <span className={styles.panelMuted}>Capturing...</span>}
+                  {capture.error && <span className={styles.panelError}>{capture.error}</span>}
+                  {capture.framePath && !capturing && (
+                    <img className={styles.frameImg}
+                      src={`${API}/api/capture/frame-file/${encodeURIComponent(capture.framePath)}`}
+                      alt="Captured frame" />
+                  )}
+                </div>
+
+                {readyToSave && (
+                  <div>
+                    <button className={styles.saveBtn} onClick={handleSaveCard} disabled={cardSaving || cardSaved}>
+                      {cardSaving ? "Saving..." : cardSaved ? "✓ Card Saved" : "Save Card"}
+                    </button>
+                    {cardError && <p className={styles.saveError}>{cardError}</p>}
+                  </div>
+                )}
               </div>
             )}
-
+          </>
+        ) : (
+          <div className={cardsLoading ? styles.cardsEmpty : styles.cardsGrid}>
+            {cardsLoading && <p>Loading cards...</p>}
+            {!cardsLoading && cards.length === 0 && <p>No cards saved for this video yet.</p>}
+            {!cardsLoading && cards.map(card => (
+              <CardItem key={card.id} card={card} onDelete={handleDeleteCard} />
+            ))}
           </div>
         )}
       </div>
+
+      {ankiOpen && (
+        <ExportAnkiModal
+          videoId={videoId}
+          defaultDeckName={`${fromLang} - ${toLang}`}
+          onClose={() => setAnkiOpen(false)}
+        />
+      )}
+
+      {floatPos && tokenRange && (
+        <button
+          className={styles.floatBtn}
+          style={{ left: floatPos.x, top: floatPos.y }}
+          onClick={handleFloatTranslate}
+        >
+          Translate
+        </button>
+      )}
     </div>
   )
 }

@@ -1,0 +1,48 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 32px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.page h1 {
+  font-size: 1.8rem;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 32px;
+}
+
+.videoSection {
+  margin-bottom: 48px;
+}
+
+.videoSection h2 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.empty {
+  color: #555;
+  font-size: 0.9rem;
+}

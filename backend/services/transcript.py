@@ -5,12 +5,15 @@ from utils import paths
 
 TIME_RE = re.compile(r"^(\d+):(\d{2})$")
 
+# Sentence-ending punctuation — covers Spanish, English, Japanese, Chinese
+SENTENCE_END_RE = re.compile(r'[.!?。！？]["\'»]?$')
 
-def parse_transcript(raw_text: str) -> List[Dict]:
+
+def parse_fragments(raw_text: str) -> List[Dict]:
+    """Parse raw YouTube transcript into timestamped text fragments."""
     lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
-    segments = []
+    fragments = []
     i = 0
-    idx = 1
 
     while i < len(lines):
         m = TIME_RE.match(lines[i])
@@ -18,36 +21,75 @@ def parse_transcript(raw_text: str) -> List[Dict]:
             i += 1
             continue
 
-        minutes = int(m.group(1))
-        seconds = int(m.group(2))
-        start = minutes * 60 + seconds
-
+        start = int(m.group(1)) * 60 + int(m.group(2))
         i += 1
+
         text_lines = []
         while i < len(lines) and not TIME_RE.match(lines[i]):
             text_lines.append(lines[i])
             i += 1
 
         text = " ".join(text_lines).strip()
-        tokens = text.split()
+        if text:
+            fragments.append({"start": float(start), "text": text})
 
-        segments.append({
+    return fragments
+
+
+def merge_into_sentences(fragments: List[Dict]) -> List[Dict]:
+    """
+    Merge short timestamped fragments into full sentences.
+    A sentence boundary is detected when a fragment ends with
+    sentence-terminating punctuation.
+    """
+    sentences = []
+    buffer_text: List[str] = []
+    buffer_start: float | None = None
+    idx = 1
+
+    for frag in fragments:
+        if buffer_start is None:
+            buffer_start = frag["start"]
+        buffer_text.append(frag["text"])
+
+        if SENTENCE_END_RE.search(frag["text"]):
+            text = " ".join(buffer_text).strip()
+            tokens = text.split()
+            sentences.append({
+                "id": idx,
+                "start": buffer_start,
+                "end": None,
+                "text": text,
+                "tokens": tokens,
+            })
+            idx += 1
+            buffer_text = []
+            buffer_start = None
+
+    # Flush any remaining text that didn't end with punctuation
+    if buffer_text and buffer_start is not None:
+        text = " ".join(buffer_text).strip()
+        sentences.append({
             "id": idx,
-            "start": float(start),
-            "end": None,  # fill later
+            "start": buffer_start,
+            "end": None,
             "text": text,
-            "tokens": tokens
+            "tokens": text.split(),
         })
-        idx += 1
 
-    # Fill end times
-    for i in range(len(segments)):
-        if i + 1 < len(segments):
-            segments[i]["end"] = segments[i + 1]["start"] - 0.05
+    # Fill end times using the next sentence's start
+    for i in range(len(sentences)):
+        if i + 1 < len(sentences):
+            sentences[i]["end"] = sentences[i + 1]["start"] - 0.05
         else:
-            segments[i]["end"] = segments[i]["start"] + 3.0
+            sentences[i]["end"] = sentences[i]["start"] + 4.0
 
-    return segments
+    return sentences
+
+
+def parse_transcript(raw_text: str) -> List[Dict]:
+    fragments = parse_fragments(raw_text)
+    return merge_into_sentences(fragments)
 
 
 def format_vtt_time(seconds: float) -> str:
@@ -70,21 +112,13 @@ def transcript_to_vtt(segments: List[Dict]) -> str:
 def save_transcript(raw_text: str, video_id: str) -> Dict[str, str]:
     segments = parse_transcript(raw_text)
 
-    json_payload = {
-        "video_id": video_id,
-        "segments": segments
-    }
-
     json_path = paths.SUBS_STORAGE / f"{video_id}.json"
-    vtt_path = paths.SUBS_STORAGE / f"{video_id}.vtt"
+    vtt_path  = paths.SUBS_STORAGE / f"{video_id}.vtt"
 
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(json_payload, f, ensure_ascii=False, indent=2)
+        json.dump({"video_id": video_id, "segments": segments}, f, ensure_ascii=False, indent=2)
 
     with open(vtt_path, "w", encoding="utf-8") as f:
         f.write(transcript_to_vtt(segments))
 
-    return {
-        "json_path": str(json_path),
-        "vtt_path": str(vtt_path)
-    }
+    return {"json_path": str(json_path), "vtt_path": str(vtt_path)}

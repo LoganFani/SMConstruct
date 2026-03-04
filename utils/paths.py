@@ -19,6 +19,9 @@ MISTRALQ4_PATH = MODELS_DIR / "mistral-7b-instruct-v0.2.Q4_0.gguf"
 LLAMA_GRAMMAR_DIR = ROOT / "llama" / "grammar"
 LLAMA_GRAMMAR_JSON_PATH = LLAMA_GRAMMAR_DIR / "json.gbnf"
 
+ANKI_CONNECT_URL = os.getenv("ANKI_CONNECT_URL", "http://127.0.0.1:8765")
+
+
 # Ensure directories exist (note: parent dir for the DB file, not the file itself)
 VIDEO_STORAGE.mkdir(parents=True, exist_ok=True)
 SUBS_STORAGE.mkdir(parents=True, exist_ok=True)

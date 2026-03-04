@@ -28,13 +28,11 @@ class CardResponse(BaseModel):
 
 @router.post("/", response_model=CardResponse, status_code=201)
 def create_card(req: CardCreate):
-    new_id = insert_card(
+    card = insert_card(
         req.video_id, req.word, req.context,
         req.translation, req.frame_path, req.audio_path
     )
-    cards = get_cards_for_video(req.video_id)
-    created = next(c for c in cards if c["id"] == new_id)
-    return created
+    return card
 
 
 @router.get("/{video_id}", response_model=list[CardResponse])

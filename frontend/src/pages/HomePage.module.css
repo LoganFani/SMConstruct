@@ -4,6 +4,12 @@
   padding: 40px 32px;
 }
 
+.headerActions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
 .page h1 {
   font-size: 2rem;
   margin-bottom: 16px;

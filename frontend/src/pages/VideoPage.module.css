@@ -100,7 +100,67 @@
   color: #90caff;
 }
 
-/* ── Word Info Panel ── */
+.floatBtn {
+  position: fixed;
+  z-index: 100;
+  transform: translateX(-50%);
+  padding: 5px 14px;
+  font-size: 0.85rem;
+  background: #646cff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.floatBtn:hover {
+  background: #535bf2;
+  border-color: transparent;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  padding: 0 16px;
+}
+.tab {
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  cursor: pointer;
+  border-radius: 0;
+  margin-bottom: -1px;
+}
+.tab:hover {
+  color: #ccc;
+  border-color: transparent;
+}
+.tab.activeTab {
+  color: #fff;
+  border-bottom-color: #646cff;
+}
+
+/* ── Cards grid inside VideoPage ── */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 20px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cardsEmpty {
+  padding: 20px 28px;
+  color: #555;
+  font-size: 0.9rem;
+}
 .panel {
   width: 360px;
   flex-shrink: 0;

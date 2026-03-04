@@ -16,10 +16,10 @@ def init_db():
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS language_configs (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                name      TEXT NOT NULL,
-                from_lang TEXT NOT NULL,
-                to_lang   TEXT NOT NULL,
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                name       TEXT NOT NULL,
+                from_lang  TEXT NOT NULL,
+                to_lang    TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -44,6 +44,16 @@ def init_db():
                 frame_path  TEXT,
                 audio_path  TEXT,
                 created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS anki_exports (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_id     INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                deck_name   TEXT NOT NULL,
+                exported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(card_id, deck_name)
             )
         ''')
 
@@ -109,6 +119,13 @@ def get_video(video_id: str) -> Optional[dict]:
         return dict(row) if row else None
 
 
+def delete_video(video_id: str) -> bool:
+    with get_db_connection() as conn:
+        cursor = conn.execute("DELETE FROM videos WHERE id = ?", (video_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
 # ── Cards ─────────────────────────────────────────────────────────────────────
 
 def insert_card(
@@ -118,7 +135,7 @@ def insert_card(
     translation: str,
     frame_path: Optional[str] = None,
     audio_path: Optional[str] = None,
-) -> int:
+) -> dict:
     with get_db_connection() as conn:
         cursor = conn.execute(
             '''INSERT INTO cards
@@ -127,7 +144,10 @@ def insert_card(
             (video_id, word, context, translation, frame_path, audio_path)
         )
         conn.commit()
-        return cursor.lastrowid
+        row = conn.execute(
+            "SELECT * FROM cards WHERE id = ?", (cursor.lastrowid,)
+        ).fetchone()
+        return dict(row)
 
 
 def get_cards_for_video(video_id: str) -> list:
@@ -144,6 +164,44 @@ def delete_card(card_id: int) -> bool:
         cursor = conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
         conn.commit()
         return cursor.rowcount > 0
+
+
+def delete_cards_for_video(video_id: str) -> list:
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM cards WHERE video_id = ?", (video_id,)
+        ).fetchall()
+        cards = [dict(r) for r in rows]
+        conn.execute("DELETE FROM cards WHERE video_id = ?", (video_id,))
+        conn.commit()
+        return cards
+
+
+# ── Anki Exports ──────────────────────────────────────────────────────────────
+
+def get_exported_card_ids(card_ids: list[int], deck_name: str) -> set[int]:
+    """Return the subset of card_ids already exported to this deck."""
+    if not card_ids:
+        return set()
+    placeholders = ",".join("?" * len(card_ids))
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            f"SELECT card_id FROM anki_exports WHERE deck_name = ? AND card_id IN ({placeholders})",
+            [deck_name, *card_ids]
+        ).fetchall()
+        return {r["card_id"] for r in rows}
+
+
+def record_exports(card_ids: list[int], deck_name: str) -> None:
+    """Mark a list of cards as exported to a deck. Ignores duplicates."""
+    if not card_ids:
+        return
+    with get_db_connection() as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO anki_exports (card_id, deck_name) VALUES (?, ?)",
+            [(cid, deck_name) for cid in card_ids]
+        )
+        conn.commit()
 
 
 init_db()
