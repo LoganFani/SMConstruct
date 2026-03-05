@@ -191,7 +191,7 @@ def create_launchers():
             "@echo off\n"
             "echo Starting Lang Reader...\n"
             "cd /d %~dp0\n"
-            "start \"Lang Reader Backend\" cmd /k \".env\\Scripts\\activate && python -m uvicorn backend.main:app --reload\"\n"
+            "start \"Lang Reader Backend\" cmd /k \"env\\Scripts\\activate && python -m uvicorn backend.main:app --reload\"\n"
             "timeout /t 3 >nul\n"
             "start \"Lang Reader Frontend\" cmd /k \"cd frontend && npm run dev\"\n"
             "timeout /t 3 >nul\n"
