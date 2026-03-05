@@ -13,3 +13,9 @@ backend/storage/videos/**
 backend/storage/audio/**
 #db
 backend/db/**
+
+#generated files
+start.bat
+stop.bat
+start.sh
+stop.sh
