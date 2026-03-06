@@ -20,7 +20,7 @@ def capture_frame(video_id: str, time_stamp: float):
         return str(frame_path)
     
     ffmpeg_cmd = [
-        "ffmpeg",
+        str(paths.BIN_DIR / "ffmpeg"),
         "-y",                      # overwrite if exists
         "-ss", str(time_stamp),    # seek to timestamp
         "-i", str(video_file),

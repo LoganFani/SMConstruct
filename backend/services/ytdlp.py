@@ -18,11 +18,12 @@ def download_video(url: str) -> str:
     ytdlp_cmd = [
         "yt-dlp",
         "-P", str(VIDEO_DIR),
-        "-f", "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b",
+        "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
         "--merge-output-format", "mp4",
+        "--ffmpeg-location", str(paths.BIN_DIR),  # point to your bin folder
         "-o", "%(id)s.%(ext)s",
-        "--print", "id",            # <--- This tells yt-dlp to output the ID
-        "--no-simulate",            # <--- Ensures it still downloads while printing
+        "--print", "id",
+        "--no-simulate",
         "--ignore-errors",
         "--no-abort-on-error",
         url,
@@ -32,6 +33,6 @@ def download_video(url: str) -> str:
     result = subprocess.run(ytdlp_cmd, check=True, capture_output=True, text=True)
     
     # Extract the ID from the output (it will be the first line)
-    video_id = result.stdout.strip()
+    video_id = result.stdout.strip().splitlines()[0].strip()
     
     return video_id

@@ -22,7 +22,7 @@ def capture_audio(video_id: str, start: float, end: float) -> str:
         return str(audio_path)
 
     ffmpeg_cmd = [
-        "ffmpeg",
+        str(paths.BIN_DIR / "ffmpeg"),
         "-y",
         "-ss", str(start),
         "-i", str(video_file),

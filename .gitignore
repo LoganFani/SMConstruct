@@ -14,6 +14,9 @@ backend/storage/audio/**
 #db
 backend/db/**
 
+#llm
+llama/models/**
+
 #generated files
 start.bat
 stop.bat

@@ -12,7 +12,6 @@ MODELS_DIR = ROOT / "llama" / "models"
 MISTRALQ4_PATH =  MODELS_DIR / "mistral-7b-instruct-v0.2.Q4_0.gguf"
 sys.path.insert(0, str(ROOT))
 
-from utils import paths
 
 # Guard to ensure this only runs on Windows
 if platform.system() != "Windows":
@@ -161,7 +160,7 @@ def create_launchers():
 
 def main():
     print("\n╔══════════════════════════════════╗")
-    print("║      SMTK Windows Setup v0.1     ║")
+    print("║      SMConstruct Windows Setup v0.1 ║")
     print("╚══════════════════════════════════╝\n")
 
     setup_env_file()
