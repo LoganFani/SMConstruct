@@ -27,7 +27,7 @@ Watch your favorite youtube videos for language learning. The goal of this proje
 
 ## Installing
 
-### Running Nativly (Windows Only)
+### Running Natively (Windows Only)
 
 Pull the repo from Github and navigate to the folder.
 ```
