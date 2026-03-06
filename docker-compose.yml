@@ -1,17 +1,15 @@
-version: '3.8'
-
 services:
   backend:
     build:
-      context: .              # Set context to root so it can see requirements.txt
+      context: .
       dockerfile: backend/Dockerfile
-    ports:
-      - "8000:8000"
     volumes:
-      - ./backend:/app
-      - ./backend/db:/app/db           # Persist your DB files
-      - ./backend/storage:/app/storage # Persist your storage files
-      - ./llama/models:/app/llama/models # Share LLM models with backend
+      - ./backend:/app/backend
+      - ./utils:/app/utils
+      - ./backend/db:/app/backend/db
+      - ./backend/storage:/app/backend/storage
+      - ./llama/models:/app/llama/models
+      - ./download_model.sh:/app/download_model.sh
     env_file:
       - .env
     restart: always

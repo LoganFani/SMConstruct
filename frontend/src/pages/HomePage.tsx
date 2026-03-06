@@ -5,7 +5,7 @@ import DeleteVideoModal from "../components/DeleteVideoModal"
 import type { LanguageConfig, VideoRecord } from "../types/language"
 import styles from "./HomePage.module.css"
 
-const API = "http://127.0.0.1:8000"
+const API = import.meta.env.VITE_API_BASE_URL;
 
 export default function HomePage() {
   const [videos, setVideos] = useState<VideoRecord[]>([])

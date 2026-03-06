@@ -4,7 +4,7 @@ import ExportAnkiModal from "../components/ExportAnkiModal"
 import type { VideoRecord } from "../types/language"
 import styles from "./CardsPage.module.css"
 
-const API = "http://127.0.0.1:8000"
+const API = import.meta.env.VITE_API_BASE_URL;
 
 interface VideoWithCards extends VideoRecord {
   cards: Card[]

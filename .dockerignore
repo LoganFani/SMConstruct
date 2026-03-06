@@ -1,0 +1,33 @@
+# Local Python environments
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local Node.js
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+
+# Large Binaries & Models (Handled via Volumes)
+bin/
+llama/models/*.gguf
+llama/models/*.bin
+
+# Windows Launchers
+*.bat
+*.exe
+
+# Git and OS metadata
+.git/
+.gitignore
+.DS_Store
+Thumbs.db
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore

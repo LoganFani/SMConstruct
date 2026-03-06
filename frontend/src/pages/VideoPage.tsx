@@ -5,7 +5,7 @@ import CardItem, { type Card } from "../components/CardItem"
 import ExportAnkiModal from "../components/ExportAnkiModal"
 import styles from "./VideoPage.module.css"
 
-const API = "http://127.0.0.1:8000"
+const API = import.meta.env.VITE_API_BASE_URL;
 
 interface TranslateResponse {
   original_content: string
