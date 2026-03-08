@@ -14,6 +14,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY download_run_model.py .
 
 COPY backend/ /app/backend/
 COPY utils/ /app/utils/
@@ -24,9 +25,8 @@ COPY download_model.sh /app/download_model.sh
 ENV PYTHONPATH=/app
 
 #Fix permissions and Line Endings
-RUN sed -i 's/\r$//' /app/download_model.sh && \
-    chmod +x /app/download_model.sh
-
+#RUN sed -i 's/\r$//' /app/download_model.sh && \
+   # chmod +x /app/download_model.sh
 EXPOSE 8000
 
-CMD ["./download_model.sh"]
+CMD ["python3", "download_run_model.py"]
